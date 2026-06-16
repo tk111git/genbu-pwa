@@ -1,0 +1,116 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GENBU · S4 entitlement gate</title>
+<style>
+  :root{--bg:#0b0d10;--panel:#111418;--line:#1e242b;--ink:#d7dde3;--dim:#7d8893;
+    --accent:#e0a83a;--ok:#5fd38a;--bad:#ef6b6b;
+    --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;}
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(900px 500px at 80% -10%,#13171c 0,transparent 60%),
+    repeating-linear-gradient(0deg,transparent 0 38px,#0d1014 38px 39px),var(--bg);
+    color:var(--ink);font-family:var(--mono);font-size:14px;line-height:1.55;padding:32px 18px 64px}
+  .wrap{max-width:860px;margin:0 auto}
+  header{border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:24px}
+  h1{font-size:18px;margin:0;letter-spacing:.06em}h1 b{color:var(--accent)}
+  .sub{color:var(--dim);font-size:12px;margin-top:6px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:18px;margin-bottom:18px}
+  .panel h2{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin:0 0 12px;font-weight:600}
+  textarea{width:100%;height:120px;background:#0a0c0f;color:var(--ink);border:1px solid var(--line);
+    border-radius:5px;padding:10px;font-family:var(--mono);font-size:11px;resize:vertical}
+  button{background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:5px;
+    padding:9px 18px;font-family:var(--mono);font-size:12px;letter-spacing:.06em;cursor:pointer;transition:.15s;text-transform:uppercase}
+  button:hover{background:var(--accent);color:#0a0c0f}
+  button.ghost{color:var(--dim);border-color:var(--line)}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+  pre{background:#0a0c0f;border:1px solid var(--line);border-radius:5px;padding:12px;font-size:12px;
+    white-space:pre-wrap;word-break:break-all;color:var(--dim);margin-top:12px;min-height:20px}
+  .ok{color:var(--ok)}.bad{color:var(--bad)}.acc{color:var(--accent)}
+  .pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;border:1px solid var(--line)}
+  .pill.ok{color:var(--ok);border-color:var(--ok)}.pill.bad{color:var(--bad);border-color:var(--bad)}
+  .feat{margin-top:14px;padding:14px;border:1px dashed var(--line);border-radius:6px}
+  .feat.locked{opacity:.5}
+  .note{color:var(--dim);font-size:11px;border-left:2px solid var(--line);padding-left:12px;margin-top:10px}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1><b>GENBU</b> · S4 entitlement gate</h1>
+    <div class="sub">offline Ed25519 verify → tier gating. H4. Reuses license core (ed25519_license). No server.</div>
+  </header>
+
+  <div class="panel">
+    <h2>Signed entitlement token</h2>
+    <div class="note">Signed once with the dev <b>private</b> key. This page holds only the <b>public</b> key (forgery is mathematically impossible). Edit any field below to simulate tampering.</div>
+    <textarea id="tok"></textarea>
+    <div class="row">
+      <button onclick="verify()">Verify & apply</button>
+      <button class="ghost" onclick="tamper()">Tamper (flip tier→pro)</button>
+      <button class="ghost" onclick="reset()">Reset</button>
+      <span id="pill" class="pill">unverified</span>
+    </div>
+    <pre id="out">—</pre>
+  </div>
+
+  <div class="panel">
+    <h2>Feature gate</h2>
+    <div id="freeFeat" class="feat"><span class="acc">FREE</span> — AES-256-GCM encrypt/decrypt, GCF output (always on)</div>
+    <div id="proFeat" class="feat locked"><span class="acc">PRO</span> — multi-device key sync · GCF advanced metadata · key rotation
+      <span id="proState" class="pill bad" style="margin-left:8px">locked</span></div>
+  </div>
+</div>
+
+<script>
+// Embedded PUBLIC key only (raw 32-byte Ed25519). Private key never ships.
+const PUBLIC_RAW_B64 = "ZqoC/Up8ht5jRGiihUHlLzq7l4Up/atLb5BdHkyiFBw=";
+const VALID_TOKEN = {"account_id":"genbu_demo_001","expires_at":"2027-05-29","features":["genbu_pro"],"issued_at":"2026-05-29","sig":"UZia0dWe6/QJ/eNrRBz2X8IJ82DNCmX96n0qQr4br7tX9KeWkY6XkXrkjiEd9hNw6s2ME3hz+f9aMDk+OCwIBg==","tier":"genbu_pro","version":2};
+
+const $=id=>document.getElementById(id);
+const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+
+// canonical payload MUST match the signer: JSON, sorted keys, compact, WITHOUT "sig"
+function signingPayload(tok){
+  const {sig, ...rest}=tok;
+  const sorted={}; Object.keys(rest).sort().forEach(k=>sorted[k]=rest[k]);
+  return new TextEncoder().encode(JSON.stringify(sorted));
+}
+
+async function verify(){
+  const out=$('out'), pill=$('pill');
+  let tok;
+  try{ tok=JSON.parse($('tok').value); }
+  catch(e){ pill.textContent='bad json'; pill.className='pill bad'; out.innerHTML='<span class="bad">❌ invalid JSON</span>'; return; }
+  try{
+    const key=await crypto.subtle.importKey('raw', b64(PUBLIC_RAW_B64), {name:'Ed25519'}, false, ['verify']);
+    const ok=await crypto.subtle.verify({name:'Ed25519'}, key, b64(tok.sig), signingPayload(tok));
+    const expired = new Date(tok.expires_at) < new Date();
+    applyGate(ok && !expired ? tok : null);
+    if(!ok){ pill.textContent='INVALID'; pill.className='pill bad';
+      out.innerHTML='<span class="bad">❌ signature INVALID — token tampered or wrong key. No features unlocked.</span>'; return; }
+    if(expired){ pill.textContent='EXPIRED'; pill.className='pill bad';
+      out.innerHTML=`<span class="bad">❌ signature valid but EXPIRED (${tok.expires_at}).</span>`; return; }
+    pill.textContent='VALID'; pill.className='pill ok';
+    out.innerHTML=`<span class="ok">✅ signature VALID (offline, embedded public key)</span>
+account : ${tok.account_id}
+tier    : <span class="acc">${tok.tier}</span>
+features: ${JSON.stringify(tok.features)}
+expires : ${tok.expires_at}`;
+  }catch(e){
+    pill.textContent='no Ed25519'; pill.className='pill bad';
+    out.innerHTML=`<span class="bad">❌ ${e.name||e}: this browser's WebCrypto may lack Ed25519. `+
+      `(Chrome ≥137 / Safari 17+ support it.)</span>`;
+  }
+}
+
+function applyGate(tok){
+  const pro = tok && Array.isArray(tok.features) && tok.features.includes('genbu_pro');
+  $('proFeat').classList.toggle('locked', !pro);
+  $('proState').textContent = pro?'unlocked':'locked';
+  $('proState').className = 'pill '+(pro?'ok':'bad');
+}
+
+function tamper(){ const t={...VALID_TOKEN, tier:'genbu_pro', features:['genbu_pro'], account_id:'attacker_999'};
+  $('tok').value=JSON.stringify(t,Object.keys(t).sort(),0); }
+function reset(){ $('tok').value=JSON.stringify(VALID_TOKEN,Object.keys(VALID_TOKEN).sort(),2);
+  $('pill').textContent='unverified'; $('pill').className='pill'; $('out').innerHTML='—'; applyGate(null); }
+reset();
+</script>
