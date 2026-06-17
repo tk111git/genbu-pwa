@@ -1,7 +1,18 @@
-<!-- S2-build:001 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GENBU · GCF v1 PoC</title>
+<meta name="theme-color" content="#0b0d10">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('/sw.js').catch(function (e) {
+        console.warn('SW registration failed:', e);
+      });
+    });
+  }
+</script>
 <style>
   :root{
     --bg:#0b0d10; --panel:#111418; --line:#1e242b; --ink:#d7dde3;

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="GENBU">
+  <rect width="512" height="512" rx="96" fill="#111418"/>
+  <!-- padlock body -->
+  <rect x="146" y="232" width="220" height="170" rx="28" fill="#e0a83a"/>
+  <!-- shackle -->
+  <path d="M196 232 v-36 a60 60 0 0 1 120 0 v36"
+        fill="none" stroke="#e0a83a" stroke-width="30" stroke-linecap="round"/>
+  <!-- keyhole -->
+  <circle cx="256" cy="300" r="26" fill="#111418"/>
+  <rect x="246" y="312" width="20" height="56" rx="10" fill="#111418"/>
+</svg>

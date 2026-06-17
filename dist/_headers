@@ -1,0 +1,17 @@
+# GENBU PWA — Workers Static Assets _headers (S3 / CF-H3)
+# Workers Static Assets では _headers を dist/ 直下に置けば既定ヘッダーを上書きできる。
+# 静的のみ（run_worker_first 不使用）∴ 全応答に適用される。
+
+# stale-SW 回避の linchpin: SW スクリプト自体を常に再検証させる。
+/sw.js
+  Cache-Control: no-cache
+
+# document / manifest は毎回 revalidate（最新コード保証・network-first と整合）。
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/manifest.webmanifest
+  Cache-Control: public, max-age=0, must-revalidate
+
+# 補足: Workers Static Assets の既定も max-age=0, must-revalidate だが、
+# SSoT として明示（決定論・K1 の延長）。/sw.js の no-cache のみが実質の上書き。
