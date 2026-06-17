@@ -5,7 +5,7 @@
 //   - versioned cache + activate purge + skipWaiting/clients.claim : 旧 SW を即時退役
 // ∴ stale-SW 回避は "構造"（online で古い shell を返す経路が存在しない）。
 
-const CACHE = 'genbu-shell-v1'; // ★ shell を変えたら v2.. に bump → activate が旧 cache を purge
+const CACHE = 'genbu-shell-v2'; // ★ shell を変えたら v2.. に bump → activate が旧 cache を purge
 
 const SHELL = [
   '/',                          // index.html（"/" のルート解決）
