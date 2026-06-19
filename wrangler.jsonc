@@ -2,8 +2,8 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "genbu-pwa",
   "compatibility_date": "2026-06-16",
-  "workers_dev": true,  // URLのデフォルト公開スイッチ
-  "preview_urls": true, // URLのデフォルト公開スイッチ
+  "workers_dev": false,  // custom domain 本線化後 ∴ workers.dev 露出を閉じる
+  "preview_urls": false, // 同上
   "assets": {
     "directory": "./dist",
     "not_found_handling": "single-page-application"
